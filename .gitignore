@@ -1,0 +1,11 @@
+# Ignorar entornos virtuales
+venv/
+env/
+
+# Ignorar archivos cacheados de Python
+__pycache__/
+*.pyc
+
+# (Opcional) Ignorar las fotos de los sujetos para no subir rostros a GitHub
+static/uploads/*
+!static/uploads/.gitkeep

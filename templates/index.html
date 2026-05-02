@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Face Auth | Verificación Biométrica</title>
+  
+  <!-- Tipografías Industriales -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Encabezado -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <!-- Icono de escaneo -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2-2v-2" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </div>
+        <div class="brand-name">FaceAuth</div>
+        <div class="brand-tag">v2.0</div>
+      </div>
+      <div class="status-bar">
+        <span id="statusText">Sistema listo</span>
+        <div id="statusDot" class="dot"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    
+    <!-- PANEL IZQUIERDO: REGISTRO (Multi-Sujeto) -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="step-badge">01</div>
+        <div>
+          <h2>Registro de Sujetos</h2>
+          <p>Registra rostros en la base de datos (Sujeto 1, Sujeto 2...)</p>
+        </div>
+      </div>
+
+      <div class="camera-wrap">
+        <video id="refVideo" autoplay playsinline muted></video>
+        <canvas id="refCanvas" style="display:none;"></canvas>
+        <img id="refPreview" class="preview-img" style="display:none;" alt="Preview Referencia">
+        
+        <div class="cam-overlay">
+          <div class="face-guide"></div>
+          <span class="cam-hint">CENTRA EL ROSTRO EN EL MARCO</span>
+        </div>
+        <!-- Efecto de escaneo -->
+        <div id="refScanLine" class="scan-line" style="display:none;"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnStartRef" class="btn btn-primary" onclick="startCamera('ref')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Activar Cámara
+        </button>
+        <button id="btnCaptureRef" class="btn btn-capture" onclick="captureAndRegister()" style="display:none;">
+          Tomar Foto
+        </button>
+        <button id="btnResetRef" class="btn btn-ghost" onclick="resetReference()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Borrar Todo
+        </button>
+      </div>
+
+      <div id="refResult" class="info-card" style="display:none;"></div>
+    </div>
+
+    <!-- SEPARADOR -->
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h8M12 8v8"/></svg>
+      </div>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- PANEL DERECHO: VERIFICACIÓN -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="step-badge">02</div>
+        <div>
+          <h2>Verificación en Tiempo Real</h2>
+          <p>Compara el rostro con la base de datos (1 a N)</p>
+        </div>
+      </div>
+
+      <div class="camera-wrap">
+        <video id="verifVideo" autoplay playsinline muted></video>
+        <canvas id="verifCanvas" style="display:none;"></canvas>
+        <img id="verifPreview" class="preview-img" style="display:none;" alt="Preview Verificación">
+
+        <div id="verifOverlay" class="cam-overlay">
+          <div class="face-guide"></div>
+          <span class="cam-hint">POSICIONA EL ROSTRO</span>
+        </div>
+        <!-- Efecto de escaneo -->
+        <div id="verifScanLine" class="scan-line" style="display:none;"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnStartVerif" class="btn btn-primary" onclick="startCamera('verif')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Activar Cámara
+        </button>
+        <button id="btnVerify" class="btn btn-verify" onclick="verifyFace()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          Verificar Identidad
+        </button>
+        <button id="btnResetVerif" class="btn btn-ghost" onclick="resetVerification()" style="display:none;">
+          Nueva captura
+        </button>
+      </div>
+
+      <div id="verifResult" class="info-card" style="display:none;"></div>
+    </div>
+
+  </main>
+
+  <!-- PANEL DE RESULTADOS DETALLADOS -->
+  <div id="resultPanel" class="result-panel" style="display: none;">
+    <div class="result-inner">
+      
+      <!-- Veredicto principal -->
+      <div id="resultVerdict" class="result-verdict"></div>
+
+      <!-- Imágenes comparativas -->
+      <div class="result-images">
+        <div class="result-img-wrap">
+          <span class="img-label">REFERENCIA</span>
+          <img id="resultRefImg" src="" alt="Referencia">
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="result-img-wrap">
+          <span class="img-label">CAPTURA</span>
+          <img id="resultCapImg" src="" alt="Captura">
+        </div>
+      </div>
+
+      <!-- Barra de porcentaje -->
+      <div class="metrics-grid">
+        <div class="metric">
+          <span class="metric-label">NIVEL DE CONFIANZA</span>
+          <span id="metricConfidence" class="metric-value">0%</span>
+          <div class="meter-wrap">
+            <div id="meterBar" class="meter-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Métricas detalladas -->
+      <div class="metric-row">
+        <div class="metric-small">
+          <span class="metric-label">DISTANCIA</span>
+          <span id="metricDistance" class="metric-value-sm">-</span>
+        </div>
+        <div class="metric-small">
+          <span class="metric-label">SEGURIDAD</span>
+          <span id="metricLevel" class="metric-value-sm">-</span>
+        </div>
+        <div class="metric-small">
+          <span class="metric-label">UMBRAL</span>
+          <span id="metricThreshold" class="metric-value-sm">-</span>
+        </div>
+        <div class="metric-small">
+          <span class="metric-label">HORA</span>
+          <span id="metricTime" class="metric-value-sm">-</span>
+        </div>
+      </div>
+
+      <!-- Historial de intentos -->
+      <div>
+        <h3 class="history-title">HISTORIAL DE SESIÓN</h3>
+        <div id="historyList" class="history-list"></div>
+      </div>
+      
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  
+  <script src="/static/app.js"></script>
+</body>
+</html>
